@@ -1,12 +1,12 @@
+use crate::{EraseArgs, pause_before_operation, progress_style};
+use alight::driver::mmc::MmcDriver;
+use alight::driver::{BlankMode, CdrDriver, CdrStatusResult};
+use cntp_i18n::{tr, tr_info, tr_warn};
+use indicatif::{ProgressBar, ProgressStyle};
 use std::process::ExitCode;
 use std::thread;
 use std::time::{Duration, Instant};
-use cntp_i18n::{tr, tr_info, tr_warn};
-use indicatif::ProgressBar;
 use tracing::{error, info, warn};
-use alight::driver::{BlankMode, CdrDriver, CdrStatusResult};
-use alight::driver::mmc::MmcDriver;
-use crate::{pause_before_operation, EraseArgs};
 
 pub fn blank(args: EraseArgs, mmc: MmcDriver) -> ExitCode {
     let blank_mode = if args.full {
@@ -44,7 +44,7 @@ pub fn blank(args: EraseArgs, mmc: MmcDriver) -> ExitCode {
     }
 
     let mut progress = match mmc.blank(blank_mode) {
-        Ok(progress) => {progress}
+        Ok(progress) => progress,
         Err(e) => {
             error!("Failed to blank device: {e:?}");
             return ExitCode::FAILURE;
@@ -61,15 +61,20 @@ pub fn blank(args: EraseArgs, mmc: MmcDriver) -> ExitCode {
             bar.set_elapsed(started.elapsed());
             bar.set_length(progress.total);
             bar.set_position(progress.progress);
+            bar.set_style(progress_style(tr!("BLANK_IN_PROGRESS").to_string()));
+            bar.tick();
         }
 
         bar.finish();
-        
+
         tr_info!("BLANK_SUCCESS", "Erased media.");
     });
 
     if mmc.scsi_driver().rezero().is_err() {
-        tr_warn!("REZERO_FAILED", "Rezero unsuccessful. Kernel may not be aware of old media. You should eject the media and reload it.");
+        tr_warn!(
+            "REZERO_FAILED",
+            "Rezero unsuccessful. Kernel may not be aware of old media. You should eject the media and reload it."
+        );
     }
 
     ExitCode::SUCCESS

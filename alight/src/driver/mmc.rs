@@ -94,17 +94,16 @@ impl CdrDriver for MmcDriver {
         thread::spawn({
             let scsi_driver = self.scsi_driver();
             move || {
-                loop {
-                    if smol::block_on(
-                        prod.push(ProgressIndicationPacket::Data(Progress::new(0, 0))),
-                    )
+                if smol::block_on(
+                    prod.push(ProgressIndicationPacket::Data(Progress::new(0, 0))),
+                )
                     .is_err()
-                    {
-                        // Don't worry about looking at progress information because no one is listening
-                        return;
-                    }
-
-                    thread::sleep(Duration::from_secs(1));
+                {
+                    // Don't worry about looking at progress information because no one is listening
+                    return;
+                }
+                
+                loop {
                     match mmc_read_disk_info(&scsi_driver) {
                         Ok(CdrStatusResult::Ready) => {
                             let _ = smol::block_on(prod.push(ProgressIndicationPacket::Complete));
@@ -136,6 +135,7 @@ impl CdrDriver for MmcDriver {
                             return;
                         }
                     }
+                    thread::sleep(Duration::from_millis(100));
                 }
             }
         });
@@ -172,10 +172,10 @@ fn mmc_read_disk_info(scsi_driver: &Arc<dyn ScsiDriver>) -> Result<CdrStatusResu
                 && (sense_data[13] == 0x8 || sense_data[13] == 0x7)
             {
                 // Not ready, long write in progress
-                if sense_data.len() >= 18 && sense_data[7] < 10 && sense_data[15] & 0x80 == 0 {
+                if sense_data.len() >= 18 && sense_data[15] & 0x80 != 0 {
                     Ok(CdrStatusResult::Busy(u16::from_be_bytes([
-                        sense_data[14],
-                        sense_data[15],
+                        sense_data[16],
+                        sense_data[17],
                     ])))
                 } else {
                     Ok(CdrStatusResult::NotReady)

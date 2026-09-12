@@ -7,7 +7,8 @@ use alight::scsi::ScsiError;
 use clap::Parser;
 use clap_verbosity_flag::InfoLevel;
 use cntp_i18n::{I18N_MANAGER, tr_error, tr_info, tr_load, trn_info};
-use indicatif::ProgressBar;
+use indicatif::{ProgressBar, ProgressState, ProgressStyle};
+use std::fmt::Write;
 use std::io::Error;
 use std::process::ExitCode;
 use std::thread;
@@ -53,7 +54,11 @@ fn main() -> ExitCode {
     let mmc = match MmcDriver::new(&args.device) {
         Ok(mmc) => mmc,
         Err(e) => {
-            tr_error!("MMC_DRIVER_CREATE_ERROR", "Failed to create MMC driver: {{error}}", error = e.to_string());
+            tr_error!(
+                "MMC_DRIVER_CREATE_ERROR",
+                "Failed to create MMC driver: {{error}}",
+                error = e.to_string()
+            );
             return ExitCode::FAILURE;
         }
     };
@@ -121,4 +126,20 @@ pub fn pause_before_operation() {
         "PAUSE_BEFORE_OPERATION_COMPLETE_STATEMENT",
         "Starting operation"
     );
+}
+
+pub fn progress_style(message: String) -> ProgressStyle {
+    ProgressStyle::with_template("{spinner} {msg} [{wide_bar}] {percentage}")
+        .unwrap()
+        .with_key("msg", move |_: &ProgressState, w: &mut dyn Write| {
+            write!(w, "{}", message).unwrap()
+        })
+        .with_key("percentage", |state: &ProgressState, w: &mut dyn Write| {
+            write!(
+                w,
+                "{:>3.0}%",
+                state.pos() as f64 / state.len().unwrap_or(1) as f64 * 100.0
+            )
+            .unwrap()
+        }).progress_chars("#-")
 }
