@@ -1,0 +1,50 @@
+{
+  "BLANKING_START_STATEMENT": {
+    "context": "blank.rs",
+    "definedIn": "src/blank.rs:19",
+    "plural": false,
+    "description": null
+  },
+  "BLANK_IN_PROGRESS": {
+    "context": "blank.rs",
+    "definedIn": "src/blank.rs:58",
+    "plural": false,
+    "description": null
+  },
+  "BLANK_SUCCESS": {
+    "context": "blank.rs",
+    "definedIn": "src/blank.rs:68",
+    "plural": false,
+    "description": null
+  },
+  "DRIVE_NOT_READY": {
+    "context": "blank.rs",
+    "definedIn": "src/blank.rs:36",
+    "plural": false,
+    "description": null
+  },
+  "PAUSE_BEFORE_OPERATION_COMPLETE_STATEMENT": {
+    "context": "main.rs",
+    "definedIn": "src/main.rs:81",
+    "plural": false,
+    "description": null
+  },
+  "PAUSE_BEFORE_OPERATION_STATEMENT": {
+    "context": "main.rs",
+    "definedIn": "src/main.rs:74",
+    "plural": true,
+    "description": null
+  },
+  "REZERO_FAILED": {
+    "context": "blank.rs",
+    "definedIn": "src/blank.rs:72",
+    "plural": false,
+    "description": null
+  },
+  "SELECTED_DEVICE": {
+    "context": "main.rs",
+    "definedIn": "src/main.rs:59",
+    "plural": false,
+    "description": null
+  }
+}

@@ -1,0 +1,20 @@
+[workspace]
+resolver = "3"
+members = ["alight", "alight_cli"]
+
+[workspace.dependencies]
+libc = "0.2"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+alight = { path = "alight" }
+smol = "2"
+clap = { version = "4", features = ["derive"] }
+clap-cargo = "0.19"
+clap-verbosity-flag = { version = "3", default-features = false, features = [
+    "tracing",
+] }
+async-ringbuf = "0.3"
+indicatif = "0.18"
+#cntp_i18n = "0.3"
+cntp_i18n = { git = "https://github.com/theCheeseboard/contemporary-rs", features = ["tracing"] }
+cntp_i18n_gen = { git = "https://github.com/theCheeseboard/contemporary-rs" }
