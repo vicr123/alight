@@ -17,21 +17,39 @@
     "plural": false,
     "description": null
   },
+  "CLOSE_TRAY_ERROR": {
+    "context": "main.rs",
+    "definedIn": "src/main.rs:98",
+    "plural": false,
+    "description": null
+  },
   "DRIVE_NOT_READY": {
     "context": "blank.rs",
     "definedIn": "src/blank.rs:36",
     "plural": false,
     "description": null
   },
+  "EJECT_ERROR": {
+    "context": "main.rs",
+    "definedIn": "src/main.rs:86",
+    "plural": false,
+    "description": null
+  },
+  "MMC_DRIVER_CREATE_ERROR": {
+    "context": "main.rs",
+    "definedIn": "src/main.rs:56",
+    "plural": false,
+    "description": null
+  },
   "PAUSE_BEFORE_OPERATION_COMPLETE_STATEMENT": {
     "context": "main.rs",
-    "definedIn": "src/main.rs:81",
+    "definedIn": "src/main.rs:121",
     "plural": false,
     "description": null
   },
   "PAUSE_BEFORE_OPERATION_STATEMENT": {
     "context": "main.rs",
-    "definedIn": "src/main.rs:74",
+    "definedIn": "src/main.rs:113",
     "plural": true,
     "description": null
   },
@@ -43,7 +61,13 @@
   },
   "SELECTED_DEVICE": {
     "context": "main.rs",
-    "definedIn": "src/main.rs:59",
+    "definedIn": "src/main.rs:62",
+    "plural": false,
+    "description": null
+  },
+  "UNLOCK_ERROR": {
+    "context": "main.rs",
+    "definedIn": "src/main.rs:74",
     "plural": false,
     "description": null
   }

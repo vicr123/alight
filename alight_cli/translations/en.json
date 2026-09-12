@@ -2,12 +2,16 @@
   "BLANKING_START_STATEMENT": "Erasing media in device {{device}} in {{mode}} mode.",
   "BLANK_IN_PROGRESS": "Erasing...",
   "BLANK_SUCCESS": "Erased media.",
+  "CLOSE_TRAY_ERROR": "Unable to close tray: {{error}}",
   "DRIVE_NOT_READY": "Drive not ready. Waiting 5 seconds...",
+  "EJECT_ERROR": "Unable to eject media: {{error}}",
+  "MMC_DRIVER_CREATE_ERROR": "Failed to create MMC driver: {{error}}",
   "PAUSE_BEFORE_OPERATION_COMPLETE_STATEMENT": "Starting operation",
   "PAUSE_BEFORE_OPERATION_STATEMENT": {
     "one": "Starting in {{count}} second. CTRL+C to stop.",
     "other": "Starting in {{count}} seconds. CTRL+C to stop."
   },
   "REZERO_FAILED": "Rezero unsuccessful. Kernel may not be aware of old media. You should eject the media and reload it.",
-  "SELECTED_DEVICE": "Selected device: {{vendor}} {{product}} at {{path}}"
+  "SELECTED_DEVICE": "Selected device: {{vendor}} {{product}} at {{path}}",
+  "UNLOCK_ERROR": "Unable to unlock media: {{error}}"
 }

@@ -165,7 +165,7 @@ impl ScsiDriver for LinuxScsiDriver {
         if io_hdr.status != 0 {
             return Err(ScsiError::DriveError {
                 sense_data: if io_hdr.sb_len_wr > 0 {
-                    Some(sense)
+                    Some(sense[..io_hdr.sb_len_wr as usize].to_vec())
                 } else {
                     None
                 }

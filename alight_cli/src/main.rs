@@ -6,7 +6,7 @@ use alight::driver::{BlankMode, CdrDriver, CdrStatusResult, GenericProgress};
 use alight::scsi::ScsiError;
 use clap::Parser;
 use clap_verbosity_flag::InfoLevel;
-use cntp_i18n::{tr_info, tr_load, I18N_MANAGER, trn_info};
+use cntp_i18n::{I18N_MANAGER, tr_error, tr_info, tr_load, trn_info};
 use indicatif::ProgressBar;
 use std::io::Error;
 use std::process::ExitCode;
@@ -28,6 +28,9 @@ struct Args {
 
 #[derive(Parser, Debug)]
 enum Command {
+    Eject,
+    CloseTray,
+    Unlock,
     Erase(EraseArgs),
 }
 
@@ -50,7 +53,7 @@ fn main() -> ExitCode {
     let mmc = match MmcDriver::new(&args.device) {
         Ok(mmc) => mmc,
         Err(e) => {
-            error!("Failed to create MMC driver: {e:?}");
+            tr_error!("MMC_DRIVER_CREATE_ERROR", "Failed to create MMC driver: {{error}}", error = e.to_string());
             return ExitCode::FAILURE;
         }
     };
@@ -65,6 +68,42 @@ fn main() -> ExitCode {
 
     match args.command {
         Command::Erase(args) => blank(args, mmc),
+        Command::Unlock => {
+            if let Err(e) = mmc.unlock_media() {
+                tr_error!(
+                    "UNLOCK_ERROR",
+                    "Unable to unlock media: {{error}}",
+                    error = e.to_string()
+                );
+                return ExitCode::FAILURE;
+            };
+
+            ExitCode::SUCCESS
+        }
+        Command::Eject => {
+            if let Err(e) = mmc.eject() {
+                tr_error!(
+                    "EJECT_ERROR",
+                    "Unable to eject media: {{error}}",
+                    error = e.to_string()
+                );
+                return ExitCode::FAILURE;
+            };
+
+            ExitCode::SUCCESS
+        }
+        Command::CloseTray => {
+            if let Err(e) = mmc.close_tray() {
+                tr_error!(
+                    "CLOSE_TRAY_ERROR",
+                    "Unable to close tray: {{error}}",
+                    error = e.to_string()
+                );
+                return ExitCode::FAILURE;
+            };
+
+            ExitCode::SUCCESS
+        }
     }
 }
 
@@ -78,5 +117,8 @@ pub fn pause_before_operation() {
         );
         thread::sleep(Duration::from_secs(1));
     }
-    tr_info!("PAUSE_BEFORE_OPERATION_COMPLETE_STATEMENT", "Starting operation");
+    tr_info!(
+        "PAUSE_BEFORE_OPERATION_COMPLETE_STATEMENT",
+        "Starting operation"
+    );
 }

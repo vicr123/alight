@@ -7,6 +7,7 @@ use crate::scsi::{
 use async_ringbuf::AsyncRb;
 use async_ringbuf::producer::AsyncProducer;
 use async_ringbuf::traits::Split;
+use std::fmt::{Display, Formatter};
 use std::fs::OpenOptions;
 use std::io::Error;
 use std::sync::Arc;
@@ -31,6 +32,15 @@ impl From<ScsiError> for MmcError {
     }
 }
 
+impl Display for MmcError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MmcError::IoError(e) => Display::fmt(e, f),
+            MmcError::ScsiError(e) => Display::fmt(e, f),
+        }
+    }
+}
+
 pub struct MmcDriver {
     scsi: Arc<dyn ScsiDriver>,
 }
@@ -52,6 +62,23 @@ impl MmcDriver {
 }
 
 impl CdrDriver for MmcDriver {
+    fn lock_media(&self) -> Result<(), ScsiError> {
+        mmc_lock_media(&self.scsi, true)
+    }
+
+    fn unlock_media(&self) -> Result<(), ScsiError> {
+        mmc_lock_media(&self.scsi, false)
+    }
+
+    fn eject(&self) -> Result<(), ScsiError> {
+        self.unlock_media()?;
+        mmc_load_unload(&self.scsi, false)
+    }
+
+    fn close_tray(&self) -> Result<(), ScsiError> {
+        mmc_load_unload(&self.scsi, true)
+    }
+
     fn blank(&self, blank_mode: BlankMode) -> Result<GenericProgress, ScsiError> {
         let blank_byte = match blank_mode {
             BlankMode::Fast => 0x11,
@@ -70,7 +97,9 @@ impl CdrDriver for MmcDriver {
                 loop {
                     if smol::block_on(
                         prod.push(ProgressIndicationPacket::Data(Progress::new(0, 0))),
-                    ).is_err() {
+                    )
+                    .is_err()
+                    {
                         // Don't worry about looking at progress information because no one is listening
                         return;
                     }
@@ -84,23 +113,26 @@ impl CdrDriver for MmcDriver {
                         Ok(CdrStatusResult::Busy(progress)) => {
                             if smol::block_on(prod.push(ProgressIndicationPacket::Data(
                                 Progress::new(progress.min(u16::MAX) as u64, u16::MAX as u64),
-                            ))).is_err() {
+                            )))
+                            .is_err()
+                            {
                                 return;
                             }
                         }
-                        Ok(CdrStatusResult::NotReady) | Err(ScsiError::DriveError {
+                        Ok(CdrStatusResult::NotReady)
+                        | Err(ScsiError::DriveError {
                             sense_data: Some(_),
                         }) => {
                             if smol::block_on(
                                 prod.push(ProgressIndicationPacket::Data(Progress::new(0, 0))),
-                            ).is_err() {
+                            )
+                            .is_err()
+                            {
                                 return;
                             }
                         }
                         Err(e) => {
-                            let _ = smol::block_on(
-                                prod.push(ProgressIndicationPacket::Err(e)),
-                            );
+                            let _ = smol::block_on(prod.push(ProgressIndicationPacket::Err(e)));
                             return;
                         }
                     }
@@ -128,7 +160,7 @@ fn mmc_ready(scsi_driver: &Arc<dyn ScsiDriver>) -> Result<CdrStatusResult, ScsiE
 }
 
 fn mmc_read_disk_info(scsi_driver: &Arc<dyn ScsiDriver>) -> Result<CdrStatusResult, ScsiError> {
-    match scsi_driver.send_cmd(&[0x51, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0]) {
+    match scsi_driver.send_cmd_with_output(&[0x51, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x0]) {
         Ok(_) => Ok(CdrStatusResult::Ready),
         Err(ScsiError::DriveError {
             sense_data: Some(sense_data),
@@ -154,4 +186,12 @@ fn mmc_read_disk_info(scsi_driver: &Arc<dyn ScsiDriver>) -> Result<CdrStatusResu
         }
         _ => Ok(CdrStatusResult::NotReady),
     }
+}
+
+fn mmc_lock_media(scsi_driver: &Arc<dyn ScsiDriver>, lock: bool) -> Result<(), ScsiError> {
+    scsi_driver.send_cmd(&[0x1E, 0x0, 0x0, 0x0, if lock { 0x1 } else { 0x0 }, 0x0])
+}
+
+fn mmc_load_unload(scsi_driver: &Arc<dyn ScsiDriver>, load: bool) -> Result<(), ScsiError> {
+    scsi_driver.send_cmd(&[0x1B, 0x0, 0x0, 0x0, if load { 0x3 } else { 0x2 }, 0x0])
 }

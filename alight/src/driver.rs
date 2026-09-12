@@ -31,6 +31,10 @@ pub enum CdrStatusResult {
 }
 
 pub trait CdrDriver {
+    fn lock_media(&self) -> Result<(), ScsiError>;
+    fn unlock_media(&self) -> Result<(), ScsiError>;
+    fn eject(&self) -> Result<(), ScsiError>;
+    fn close_tray(&self) -> Result<(), ScsiError>;
     fn blank(&self, blank_mode: BlankMode) -> Result<GenericProgress, ScsiError>;
     fn status(&self) -> Result<CdrStatusResult, ScsiError>;
 }

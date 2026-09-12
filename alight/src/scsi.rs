@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::io::Error;
 use crate::scsi::linux::LinuxScsiDriver;
 
@@ -23,6 +24,26 @@ impl From<std::io::Error> for ScsiError {
     }
 }
 
+impl Display for ScsiError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ScsiError::IoError(e) => {
+                Display::fmt(e, f)
+            }
+            ScsiError::DriveError { sense_data } => {
+                write!(f, "Generic SCSI error")?;
+                if let Some(sense_data) = sense_data {
+                    write!(f, ": Sense bytes:")?;
+                    for sense_byte in sense_data {
+                        write!(f, " {:02X}", sense_byte)?;
+                    }
+                };
+                Ok(())
+            }
+        }
+    }
+}
+
 pub struct ScsiEnquiry {
     pub vendor: String,
     pub product: String,
@@ -44,11 +65,11 @@ impl From<TestUnitReadyResponse> for bool {
 
 pub trait ScsiDriver: Send + Sync {
     fn device(&self) -> &str;
-    
+
     fn vendor(&self) -> &str;
     fn product(&self) -> &str;
     fn revision(&self) -> &str;
-    
+
     fn send_cmd_with_direction(
         &self,
         cmd: &[u8],
@@ -101,7 +122,7 @@ pub trait ScsiDriver: Send + Sync {
             Err(e) => Err(e),
         }
     }
-    
+
     fn rezero(&self) -> Result<(), ScsiError> {
         self.send_cmd(&[0x01, 0x0, 0x0, 0x0, 0x0, 0x0])
     }
