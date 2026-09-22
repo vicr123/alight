@@ -1,9 +1,8 @@
-use async_ringbuf::traits::RingBuffer;
-use async_ringbuf::{AsyncHeapCons, AsyncRb};
+use async_channel::Receiver;
 use smol::stream::StreamExt;
 
 pub struct ProgressIndication<T, E> {
-    inner_rb: Option<AsyncHeapCons<ProgressIndicationPacket<T, E>>>,
+    inner_rb: Option<Receiver<ProgressIndicationPacket<T, E>>>,
 }
 
 pub(crate) enum ProgressIndicationPacket<T, E> {
@@ -12,8 +11,14 @@ pub(crate) enum ProgressIndicationPacket<T, E> {
     Err(E),
 }
 
+impl<T, E> From<T> for ProgressIndicationPacket<T, E> {
+    fn from(value: T) -> Self {
+        ProgressIndicationPacket::Data(value)
+    }
+}
+
 impl<T, E> ProgressIndication<T, E> {
-    pub(crate) fn new(inner_rb: AsyncHeapCons<ProgressIndicationPacket<T, E>>) -> Self {
+    pub(crate) fn new(inner_rb: Receiver<ProgressIndicationPacket<T, E>>) -> Self {
         Self {
             inner_rb: Some(inner_rb),
         }
@@ -24,13 +29,13 @@ impl<T, E> ProgressIndication<T, E> {
             return None;
         };
 
-        match inner_rb.next().await {
-            None | Some(ProgressIndicationPacket::Complete) => {
+        match inner_rb.recv().await {
+            Err(_) | Ok(ProgressIndicationPacket::Complete) => {
                 self.inner_rb.take();
                 None
             }
-            Some(ProgressIndicationPacket::Data(data)) => Some(Ok(data)),
-            Some(ProgressIndicationPacket::Err(err)) => {
+            Ok(ProgressIndicationPacket::Data(data)) => Some(Ok(data)),
+            Ok(ProgressIndicationPacket::Err(err)) => {
                 self.inner_rb.take();
                 Some(Err(err))
             }

@@ -1,6 +1,8 @@
 pub mod blank;
+pub mod simple_audio;
 
 use crate::blank::blank;
+use crate::simple_audio::simple_audio;
 use alight::driver::mmc::MmcDriver;
 use alight::driver::{BlankMode, CdrDriver, CdrStatusResult, GenericProgress};
 use alight::scsi::ScsiError;
@@ -33,12 +35,22 @@ enum Command {
     CloseTray,
     Unlock,
     Erase(EraseArgs),
+    BurnAudio(SimpleAudioArgs),
 }
 
 #[derive(Parser, Debug)]
 pub struct EraseArgs {
     #[arg(long)]
     full: bool,
+}
+
+#[derive(Parser, Debug)]
+pub struct SimpleAudioArgs {
+    #[arg(long)]
+    dry: bool,
+
+    #[arg(required = true)]
+    files: Vec<String>,
 }
 
 fn main() -> ExitCode {
@@ -73,6 +85,7 @@ fn main() -> ExitCode {
 
     match args.command {
         Command::Erase(args) => blank(args, mmc),
+        Command::BurnAudio(args) => simple_audio(args, mmc),
         Command::Unlock => {
             if let Err(e) = mmc.unlock_media() {
                 tr_error!(
@@ -128,18 +141,27 @@ pub fn pause_before_operation() {
     );
 }
 
-pub fn progress_style(message: String) -> ProgressStyle {
-    ProgressStyle::with_template("{spinner} {msg} [{wide_bar}] {percentage}")
+pub fn progress_style(message: String, working: bool, indeterminate: bool) -> ProgressStyle {
+    ProgressStyle::with_template(&format!(
+        "{} {{msg}} {}",
+        if working { "{spinner}" } else { " " },
+        if indeterminate {
+            ""
+        } else {
+            "[{wide_bar}] {percentage}"
+        }
+    ))
+    .unwrap()
+    .with_key("msg", move |_: &ProgressState, w: &mut dyn Write| {
+        write!(w, "{}", message).unwrap()
+    })
+    .with_key("percentage", |state: &ProgressState, w: &mut dyn Write| {
+        write!(
+            w,
+            "{:>3.0}%",
+            state.pos() as f64 / state.len().unwrap_or(1) as f64 * 100.0
+        )
         .unwrap()
-        .with_key("msg", move |_: &ProgressState, w: &mut dyn Write| {
-            write!(w, "{}", message).unwrap()
-        })
-        .with_key("percentage", |state: &ProgressState, w: &mut dyn Write| {
-            write!(
-                w,
-                "{:>3.0}%",
-                state.pos() as f64 / state.len().unwrap_or(1) as f64 * 100.0
-            )
-            .unwrap()
-        }).progress_chars("#-")
+    })
+    .progress_chars("#-")
 }

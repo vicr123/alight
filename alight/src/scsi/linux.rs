@@ -2,7 +2,7 @@ use crate::scsi::{ScsiDirection, ScsiDriver, ScsiError};
 use std::ffi::CString;
 use std::fs::{File, OpenOptions};
 use std::os::fd::{AsRawFd, RawFd};
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 #[repr(C)]
 #[derive(Default)]
@@ -36,15 +36,21 @@ const SG_DXFER_TO_DEV: i32 = -2;
 const SG_DXFER_FROM_DEV: i32 = -3;
 
 const SG_IO: libc::c_ulong = 0x2285;
+const SG_SET_RESERVED_SIZE: libc::c_ulong = 0x2275;
+const SG_GET_RESERVED_SIZE: libc::c_ulong = 0x2272;
 
 struct LinuxFd(RawFd);
 
 impl LinuxFd {
     pub fn new(block_device: &str) -> Result<Self, ScsiError> {
-        let c_path = CString::new(block_device).map_err(|_| ScsiError::DriveError {
-            sense_data: None
-        })?;
-        let fd = unsafe { libc::open(c_path.as_ptr(), libc::O_RDWR | libc::O_NONBLOCK | libc::O_EXCL) };
+        let c_path =
+            CString::new(block_device).map_err(|_| ScsiError::DriveError { cmd: vec![], sense_data: None })?;
+        let fd = unsafe {
+            libc::open(
+                c_path.as_ptr(),
+                libc::O_RDWR | libc::O_NONBLOCK | libc::O_EXCL,
+            )
+        };
         if fd < 0 {
             let e = std::io::Error::last_os_error();
             error!("Unable to open block device: {}", e);
@@ -66,17 +72,29 @@ pub struct LinuxScsiDriver {
     vendor: String,
     product: String,
     revision: String,
+
+    max_buffer_size: usize,
 }
 
 impl LinuxScsiDriver {
     pub fn new(block_device: &str) -> Result<Self, ScsiError> {
         let fd = LinuxFd::new(block_device)?;
+
+        let requested_transfer_length: core::ffi::c_int = 65536;
+        let r = unsafe { libc::ioctl(fd.0, SG_SET_RESERVED_SIZE, &requested_transfer_length as *const core::ffi::c_int) };
+        let mut max_transfer_length: core::ffi::c_int = 0;
+        let r = unsafe { libc::ioctl(fd.0, SG_GET_RESERVED_SIZE, &mut max_transfer_length as *mut core::ffi::c_int) };
+        if max_transfer_length != 65536 {
+            panic!("Failed to set max transfer length to 65536")
+        }
+
         let mut driver = LinuxScsiDriver {
             device: block_device.to_string(),
             fd,
             vendor: String::new(),
             product: String::new(),
             revision: String::new(),
+            max_buffer_size: 0,
         };
 
         let _ = driver.rezero();
@@ -131,7 +149,7 @@ impl ScsiDriver for LinuxScsiDriver {
             interface_id: 'S' as i32,
             cmd_len: cmd.len() as u8,
             cmdp: &cmd[0] as *const u8 as *mut u8,
-            timeout: 10000,
+            timeout: 120000,
             sbp: &sense[0] as *const u8 as *mut u8,
             mx_sb_len: sense.len() as u8,
             flags: 1,
@@ -168,8 +186,9 @@ impl ScsiDriver for LinuxScsiDriver {
                     Some(sense[..io_hdr.sb_len_wr as usize].to_vec())
                 } else {
                     None
-                }
-            })
+                },
+                cmd: cmd.to_vec(),
+            });
         }
 
         Ok(match direction {

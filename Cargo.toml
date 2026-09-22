@@ -13,7 +13,7 @@ clap-cargo = "0.19"
 clap-verbosity-flag = { version = "3", default-features = false, features = [
     "tracing",
 ] }
-async-ringbuf = "0.3"
+async-channel = "2"
 indicatif = "0.18"
 #cntp_i18n = "0.3"
 cntp_i18n = { git = "https://github.com/theCheeseboard/contemporary-rs", features = ["tracing"] }

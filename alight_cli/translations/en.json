@@ -2,16 +2,29 @@
   "BLANKING_START_STATEMENT": "Erasing media in device {{device}} in {{mode}} mode.",
   "BLANK_IN_PROGRESS": "Erasing...",
   "BLANK_SUCCESS": "Erased media.",
+  "BURN_FAIL": "Burn failed: {{error}}",
+  "BURN_POWER_CALIBRATION": "Preparing burn session",
+  "BURN_SUCCESS": "Burned.",
+  "BURN_SUMMARY": {
+    "one": "Burning {{count}} track to disc in {{device}}.",
+    "other": "Burning {{count}} tracks to disc in {{device}}."
+  },
+  "BURN_WRITE_LEAD_IN": "Writing lead-in",
+  "BURN_WRITE_LEAD_OUT": "Finalising disc",
+  "BURN_WRITE_TRACK": "Writing track {{track}}",
   "CLOSE_TRAY_ERROR": "Unable to close tray: {{error}}",
   "DRIVE_NOT_READY": "Drive not ready. Waiting 5 seconds...",
   "EJECT_ERROR": "Unable to eject media: {{error}}",
+  "FILE_ERROR": "Cannot open file {{file}}: {{error}}",
   "MMC_DRIVER_CREATE_ERROR": "Failed to create MMC driver: {{error}}",
   "PAUSE_BEFORE_OPERATION_COMPLETE_STATEMENT": "Starting operation",
   "PAUSE_BEFORE_OPERATION_STATEMENT": {
     "one": "Starting in {{count}} second. CTRL+C to stop.",
     "other": "Starting in {{count}} seconds. CTRL+C to stop."
   },
+  "READ_ERROR": "Cannot read file: {{error}}",
   "REZERO_FAILED": "Rezero unsuccessful. Kernel may not be aware of old media. You should eject the media and reload it.",
+  "SEEK_ERROR": "Cannot seek file: {{error}}",
   "SELECTED_DEVICE": "Selected device: {{vendor}} {{product}} at {{path}}",
   "UNLOCK_ERROR": "Unable to unlock media: {{error}}"
 }

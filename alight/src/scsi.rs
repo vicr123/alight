@@ -1,8 +1,27 @@
+use crate::driver::CdrDriverError;
+use crate::scsi::linux::LinuxScsiDriver;
 use std::fmt::{Display, Formatter};
 use std::io::Error;
-use crate::scsi::linux::LinuxScsiDriver;
+use std::ops::Deref;
 
 mod linux;
+
+pub enum ScsiOpcode {
+    Rezero = 0x01,
+    StartStopUnit = 0x1B,
+    PreventAllowMediumRemoval = 0x1E,
+    Write10 = 0x2A,
+    FlushCache = 0x35,
+    ReadDiskInfo = 0x51,
+    ReadTrackInformation = 0x52,
+    SendOpcInformation = 0x54,
+    ModeSelect = 0x55,
+    ModeSense = 0x5A,
+    ReadBufferCapacity = 0x5C,
+    SendCueSheet = 0x5D,
+    Blank = 0xA1,
+    SetCdSpeed = 0xBB,
+}
 
 pub enum ScsiDirection<'a> {
     None,
@@ -14,8 +33,9 @@ pub enum ScsiDirection<'a> {
 pub enum ScsiError {
     IoError(std::io::Error),
     DriveError {
+        cmd: Vec<u8>,
         sense_data: Option<Vec<u8>>,
-    }
+    },
 }
 
 impl From<std::io::Error> for ScsiError {
@@ -27,10 +47,8 @@ impl From<std::io::Error> for ScsiError {
 impl Display for ScsiError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ScsiError::IoError(e) => {
-                Display::fmt(e, f)
-            }
-            ScsiError::DriveError { sense_data } => {
+            ScsiError::IoError(e) => Display::fmt(e, f),
+            ScsiError::DriveError { cmd, sense_data } => {
                 write!(f, "Generic SCSI error")?;
                 if let Some(sense_data) = sense_data {
                     write!(f, ": Sense bytes:")?;
@@ -38,6 +56,10 @@ impl Display for ScsiError {
                         write!(f, " {:02X}", sense_byte)?;
                     }
                 };
+                write!(f, ". Original command:")?;
+                for cmd_byte in cmd {
+                    write!(f, " {:02X}", cmd_byte)?;
+                }
                 Ok(())
             }
         }
@@ -106,6 +128,7 @@ pub trait ScsiDriver: Send + Sync {
             Ok(_) => Ok(TestUnitReadyResponse::Ready),
             Err(ScsiError::DriveError {
                 sense_data: Some(sense_data),
+                cmd,
             }) => match sense_data[2] & 0x0F {
                 // Not Ready
                 0x02 => match sense_data[12] {
@@ -116,7 +139,8 @@ pub trait ScsiDriver: Send + Sync {
                 // Unit Attention
                 0x06 => Ok(TestUnitReadyResponse::Ready),
                 _ => Err(ScsiError::DriveError {
-                    sense_data: Some(sense_data)
+                    sense_data: Some(sense_data),
+                    cmd,
                 }),
             },
             Err(e) => Err(e),
@@ -124,7 +148,7 @@ pub trait ScsiDriver: Send + Sync {
     }
 
     fn rezero(&self) -> Result<(), ScsiError> {
-        self.send_cmd(&[0x01, 0x0, 0x0, 0x0, 0x0, 0x0])
+        self.send_cmd(&[ScsiOpcode::Rezero as u8, 0x0, 0x0, 0x0, 0x0, 0x0])
     }
 }
 

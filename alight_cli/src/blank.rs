@@ -61,7 +61,7 @@ pub fn blank(args: EraseArgs, mmc: MmcDriver) -> ExitCode {
             bar.set_elapsed(started.elapsed());
             bar.set_length(progress.total);
             bar.set_position(progress.progress);
-            bar.set_style(progress_style(tr!("BLANK_IN_PROGRESS").to_string()));
+            bar.set_style(progress_style(tr!("BLANK_IN_PROGRESS").to_string(),true, progress.total == 0));
             bar.tick();
         }
 
