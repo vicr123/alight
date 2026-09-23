@@ -2,7 +2,7 @@ use crate::driver::CdrDriverError;
 use crate::scsi::linux::LinuxScsiDriver;
 use std::fmt::{Display, Formatter};
 use std::io::Error;
-use std::ops::Deref;
+use std::ops::{Deref, Index};
 
 mod linux;
 
@@ -34,8 +34,35 @@ pub enum ScsiError {
     IoError(std::io::Error),
     DriveError {
         cmd: Vec<u8>,
-        sense_data: Option<Vec<u8>>,
+        sense_data: Option<SenseData>,
     },
+}
+
+#[derive(Debug, Clone)]
+pub struct SenseData {
+    pub bytes: Vec<u8>,
+}
+
+impl SenseData {
+    pub fn new(bytes: Vec<u8>) -> Self {
+        Self { bytes }
+    }
+
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
+    pub fn len(&self) -> usize {
+        self.bytes.len()
+    }
+}
+
+impl Index<usize> for SenseData {
+    type Output = u8;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.bytes[index]
+    }
 }
 
 impl From<std::io::Error> for ScsiError {
@@ -52,7 +79,7 @@ impl Display for ScsiError {
                 write!(f, "Generic SCSI error")?;
                 if let Some(sense_data) = sense_data {
                     write!(f, ": Sense bytes:")?;
-                    for sense_byte in sense_data {
+                    for sense_byte in sense_data.bytes() {
                         write!(f, " {:02X}", sense_byte)?;
                     }
                 };

@@ -19,43 +19,43 @@
   },
   "BURN_FAIL": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:95",
+    "definedIn": "src/simple_audio.rs:73",
     "plural": false,
     "description": null
   },
   "BURN_POWER_CALIBRATION": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:145",
+    "definedIn": "src/simple_audio.rs:123",
     "plural": false,
     "description": null
   },
   "BURN_SUCCESS": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:137",
+    "definedIn": "src/simple_audio.rs:115",
     "plural": false,
     "description": null
   },
   "BURN_SUMMARY": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:64",
+    "definedIn": "src/simple_audio.rs:42",
     "plural": true,
     "description": null
   },
   "BURN_WRITE_LEAD_IN": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:148",
+    "definedIn": "src/simple_audio.rs:126",
     "plural": false,
     "description": null
   },
   "BURN_WRITE_LEAD_OUT": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:158",
+    "definedIn": "src/simple_audio.rs:136",
     "plural": false,
     "description": null
   },
   "BURN_WRITE_TRACK": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:152",
+    "definedIn": "src/simple_audio.rs:130",
     "plural": false,
     "description": null
   },
@@ -79,7 +79,7 @@
   },
   "FILE_ERROR": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:26",
+    "definedIn": "src/simple_audio.rs:147",
     "plural": false,
     "description": null
   },
@@ -103,7 +103,7 @@
   },
   "READ_ERROR": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:38",
+    "definedIn": "src/simple_audio.rs:177",
     "plural": false,
     "description": null
   },
@@ -115,7 +115,7 @@
   },
   "SEEK_ERROR": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:48",
+    "definedIn": "src/simple_audio.rs:158",
     "plural": false,
     "description": null
   },

@@ -11,17 +11,17 @@ use std::collections::HashMap;
 use std::iter;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::debug;
+use tracing::{debug, error};
 
 pub struct BurnDaoAudioCdTrack {
     length: u32,
-    producer: Box<dyn FnMut(&mut [u8; 2352]) -> () + Send + Sync>,
+    producer: Box<dyn FnMut(&mut [u8; 2352]) -> Result<(), String> + Send>,
 }
 
 impl BurnDaoAudioCdTrack {
     pub fn new(
         length: u32,
-        producer: impl FnMut(&mut [u8; 2352]) -> () + Send + Sync + 'static,
+        producer: impl FnMut(&mut [u8; 2352]) -> Result<(), String> + Send + 'static,
     ) -> Self {
         Self {
             length,
@@ -230,7 +230,10 @@ async fn burn(
 
                 // Write all the track data
                 for i in 0..length {
-                    (track.producer)(&mut frame);
+                    if let Err(e) = (track.producer)(&mut frame) {
+                        error!("Error writing track {}: {}", track_index, e);
+                        return Err(CdrDriverError::InvalidResponse);
+                    }
                     writer.write(&frame)?;
                     progress.task_progress.insert(
                         BurnDaoAudioCdJobProgressTask::WriteTrack(track_index as u8),

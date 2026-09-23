@@ -17,6 +17,9 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 indicatif = { workspace = true }
 cntp_i18n = { workspace = true }
+symphonia = { workspace = true }
+rubato = { workspace = true }
+ringbuf = { workspace = true }
 
 [build-dependencies]
 cntp_i18n_gen = { workspace = true }

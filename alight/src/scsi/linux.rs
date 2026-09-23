@@ -1,4 +1,4 @@
-use crate::scsi::{ScsiDirection, ScsiDriver, ScsiError};
+use crate::scsi::{ScsiDirection, ScsiDriver, ScsiError, SenseData};
 use std::ffi::CString;
 use std::fs::{File, OpenOptions};
 use std::os::fd::{AsRawFd, RawFd};
@@ -183,7 +183,7 @@ impl ScsiDriver for LinuxScsiDriver {
         if io_hdr.status != 0 {
             return Err(ScsiError::DriveError {
                 sense_data: if io_hdr.sb_len_wr > 0 {
-                    Some(sense[..io_hdr.sb_len_wr as usize].to_vec())
+                    Some(SenseData::new(sense[..io_hdr.sb_len_wr as usize].to_vec()))
                 } else {
                     None
                 },

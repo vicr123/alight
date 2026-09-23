@@ -18,3 +18,6 @@ indicatif = "0.18"
 #cntp_i18n = "0.3"
 cntp_i18n = { git = "https://github.com/theCheeseboard/contemporary-rs", features = ["tracing"] }
 cntp_i18n_gen = { git = "https://github.com/theCheeseboard/contemporary-rs" }
+symphonia = { version = "0.6", features = ["all"] }
+rubato = "2"
+ringbuf = "0.5"
