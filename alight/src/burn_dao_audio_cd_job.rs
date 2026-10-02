@@ -1,4 +1,5 @@
 use crate::addresses::{Lba, Msf};
+use crate::cd_text::CdText;
 use crate::cue_sheet::{
     CueSheet, CueSheetControl, CueSheetDataForm, CueSheetDataFormSubchannel, CueSheetTransition,
     TRACK_LEAD_OUT,
@@ -33,6 +34,7 @@ impl BurnDaoAudioCdTrack {
 pub struct BurnDaoAudioCdJob {
     dry: bool,
     tracks: Vec<BurnDaoAudioCdTrack>,
+    cd_text: Option<CdText>,
 }
 
 #[derive(Clone, Debug)]
@@ -56,6 +58,7 @@ impl BurnDaoAudioCdJob {
         Self {
             dry: false,
             tracks: vec![],
+            cd_text: None,
         }
     }
 
@@ -65,6 +68,10 @@ impl BurnDaoAudioCdJob {
 
     pub fn push_track(&mut self, track: BurnDaoAudioCdTrack) {
         self.tracks.push(track);
+    }
+
+    pub fn set_cd_text(&mut self, cd_text: CdText) {
+        self.cd_text = Some(cd_text);
     }
 
     pub fn burn(
@@ -112,6 +119,7 @@ async fn burn(
     let _ = prod.send(progress.clone().into()).await;
 
     driver.lock_media()?;
+    let disc_information = driver.disc_information()?;
     driver.set_speed_multiplier(None)?;
     driver.start_write_session(job.dry, false, CdrSessionFormat::CdDigitalAudio)?;
     if !job.dry {
@@ -132,10 +140,18 @@ async fn burn(
         control: CueSheetControl::Audio,
         track: 0,
         index: 0,
-        data_form_subchannel: CueSheetDataFormSubchannel::NoSubchannel,
-        data_form: CueSheetDataForm::Rom1,
+        data_form_subchannel: if job.cd_text.is_some() {
+            CueSheetDataFormSubchannel::SupplyPackedRW
+        } else {
+            CueSheetDataFormSubchannel::NoSubchannel
+        },
+        data_form: CueSheetDataForm::LeadIn,
         scms: 0,
-        address: Msf::default(),
+        address: if job.cd_text.is_some() {
+            disc_information.lead_in_start.into()
+        } else {
+            Msf::default()
+        },
     });
     cue_sheet.push_transition(CueSheetTransition {
         control: CueSheetControl::Audio,
@@ -158,7 +174,7 @@ async fn burn(
             scms: 0,
             address: current_address,
         });
-        current_address = current_address + Lba(track.length as u64);
+        current_address = current_address + Lba(track.length as i32);
     }
     // Add the lead out
     cue_sheet.push_transition(CueSheetTransition {
@@ -199,19 +215,55 @@ async fn burn(
         let prod = prod.clone();
         let tracks = job.tracks;
         move || -> Result<BurnDaoAudioCdJobProgress, CdrDriverError> {
-            let mut writer = driver.start_write10(Lba::default())?;
+            // Write the CD text
+            let mut lead_in_progress_total = 150;
+            let mut lead_in_progress_base = 0;
+            if let Some(cd_text) = job.cd_text {
+                lead_in_progress_total += disc_information.lead_in_length.0 as u64;
+                lead_in_progress_base = disc_information.lead_in_length.0 as u64;
 
-            // Write 150 sectors of 0 for lead-in
+                // 96 bytes for the CD text
+                let mut writer = driver.start_write10(96, -disc_information.lead_in_length)?;
+
+                let mut frame = [0_u8; 96];
+                let cd_text = cd_text.into_bytes();
+
+                // Write the CD text
+                for write_lba in 0..(disc_information.lead_in_length.0 - 150) {
+                    for index in 0..24 {
+                        let frame_idx = index * 4;
+                        let cd_text_idx = (index * 3 + write_lba as usize * 24 * 3) % cd_text.len();
+                        
+                        unfold_for_subchannel(
+                            &cd_text[cd_text_idx..cd_text_idx + 3].try_into().unwrap(),
+                            (&mut frame[frame_idx..frame_idx + 4]).try_into().unwrap(),
+                        );
+                    }
+                    writer.write(&frame)?;
+                    progress.task_progress.insert(
+                        BurnDaoAudioCdJobProgressTask::WriteLeadIn,
+                        Progress::new(write_lba as u64, lead_in_progress_total),
+                    );
+                    let _ = prod.send_blocking(progress.clone().into());
+                }
+
+                writer.flush()?;
+            }
+
+            // 2448 bytes for the write mode
+            let mut writer = driver.start_write10(2352, Lba::PREGAP_START)?;
+
+            // Write 150 sectors of 0 for pregap
             for i in 1..=150 {
                 writer.write(&[0; 2352])?;
                 progress.task_progress.insert(
                     BurnDaoAudioCdJobProgressTask::WriteLeadIn,
-                    Progress::new(i, 150),
+                    Progress::new(lead_in_progress_base + i as u64, lead_in_progress_total),
                 );
                 let _ = prod.send_blocking(progress.clone().into());
             }
 
-            let mut frame = [0_u8; 2352];
+            let mut frame = [0; 2352];
             for (track_index, mut track) in tracks.into_iter().enumerate() {
                 let length = track.length;
 
@@ -219,7 +271,7 @@ async fn burn(
                     "Start writing track {}, starting at {}, track length {}",
                     track_index,
                     Msf::from(writer.address()),
-                    Msf::from(Lba(length as u64))
+                    Msf::from(Lba(length as i32))
                 );
                 progress.current_task =
                     BurnDaoAudioCdJobProgressTask::WriteTrack(track_index as u8);
@@ -275,4 +327,11 @@ async fn wait_for_ready(driver: &Box<dyn CdrDriver>) {
 
         Timer::after(Duration::from_millis(100)).await;
     }
+}
+
+fn unfold_for_subchannel(input: &[u8; 3], output: &mut [u8; 4]) {
+    output[0] = (input[0] >> 2) & 0b00111111;
+    output[1] = ((input[0] << 4) & 0b00110000) | ((input[1] >> 4) & 0b00001111);
+    output[2] = ((input[1] << 2) & 0b00111100) | ((input[2] >> 6) & 0b00000011);
+    output[3] = input[2] & 0b00111111;
 }

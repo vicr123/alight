@@ -82,6 +82,12 @@ pub struct CdrDriverBufferCapacity {
     pub available: u32,
 }
 
+pub struct CdrDriverDiscInformation {
+    pub lead_in_start: Lba,
+    pub lead_in_length: Lba,
+    pub lead_out_length: Lba
+}
+
 pub trait CdrDriver: Send + Sync {
     fn boxed_clone(&self) -> Box<dyn CdrDriver>;
     fn lock_media(&self) -> Result<(), ScsiError>;
@@ -107,10 +113,11 @@ pub trait CdrDriver: Send + Sync {
         block_descriptor: Option<&[u8; 8]>,
     ) -> Result<(), ScsiError>;
     fn send_cue_sheet(&self, cue_sheet: &[u8]) -> Result<(), CdrDriverError>;
-    fn start_write10(&self, address: Lba) -> Result<Writer, CdrDriverError>;
+    fn start_write10(&self, block_size: usize, address: Lba) -> Result<Writer, CdrDriverError>;
     fn flush_cache(&self) -> Result<(), CdrDriverError>;
     fn set_speed_multiplier(&self, speed_multiplier: Option<u8>) -> Result<(), CdrDriverError>;
     fn read_buffer_capacity(&self) -> Result<CdrDriverBufferCapacity, CdrDriverError>;
+    fn disc_information(&self) -> Result<CdrDriverDiscInformation, CdrDriverError>;
     fn next_write_address(&self) -> Result<Lba, CdrDriverError>;
 }
 

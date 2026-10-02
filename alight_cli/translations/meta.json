@@ -19,49 +19,49 @@
   },
   "BURN_FAIL": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:73",
+    "definedIn": "src/simple_audio.rs:84",
     "plural": false,
     "description": null
   },
   "BURN_POWER_CALIBRATION": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:123",
+    "definedIn": "src/simple_audio.rs:134",
     "plural": false,
     "description": null
   },
   "BURN_SUCCESS": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:115",
+    "definedIn": "src/simple_audio.rs:126",
     "plural": false,
     "description": null
   },
   "BURN_SUMMARY": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:42",
+    "definedIn": "src/simple_audio.rs:53",
     "plural": true,
     "description": null
   },
   "BURN_WRITE_LEAD_IN": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:126",
+    "definedIn": "src/simple_audio.rs:137",
     "plural": false,
     "description": null
   },
   "BURN_WRITE_LEAD_OUT": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:136",
+    "definedIn": "src/simple_audio.rs:147",
     "plural": false,
     "description": null
   },
   "BURN_WRITE_TRACK": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:130",
+    "definedIn": "src/simple_audio.rs:141",
     "plural": false,
     "description": null
   },
   "CLOSE_TRAY_ERROR": {
     "context": "main.rs",
-    "definedIn": "src/main.rs:116",
+    "definedIn": "src/main.rs:119",
     "plural": false,
     "description": null
   },
@@ -73,37 +73,37 @@
   },
   "EJECT_ERROR": {
     "context": "main.rs",
-    "definedIn": "src/main.rs:104",
+    "definedIn": "src/main.rs:107",
     "plural": false,
     "description": null
   },
   "FILE_ERROR": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:147",
+    "definedIn": "src/simple_audio.rs:158",
     "plural": false,
     "description": null
   },
   "MMC_DRIVER_CREATE_ERROR": {
     "context": "main.rs",
-    "definedIn": "src/main.rs:70",
+    "definedIn": "src/main.rs:73",
     "plural": false,
     "description": null
   },
   "PAUSE_BEFORE_OPERATION_COMPLETE_STATEMENT": {
     "context": "main.rs",
-    "definedIn": "src/main.rs:139",
+    "definedIn": "src/main.rs:142",
     "plural": false,
     "description": null
   },
   "PAUSE_BEFORE_OPERATION_STATEMENT": {
     "context": "main.rs",
-    "definedIn": "src/main.rs:131",
+    "definedIn": "src/main.rs:134",
     "plural": true,
     "description": null
   },
   "READ_ERROR": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:177",
+    "definedIn": "src/simple_audio.rs:188",
     "plural": false,
     "description": null
   },
@@ -115,19 +115,19 @@
   },
   "SEEK_ERROR": {
     "context": "simple_audio.rs",
-    "definedIn": "src/simple_audio.rs:158",
+    "definedIn": "src/simple_audio.rs:169",
     "plural": false,
     "description": null
   },
   "SELECTED_DEVICE": {
     "context": "main.rs",
-    "definedIn": "src/main.rs:79",
+    "definedIn": "src/main.rs:82",
     "plural": false,
     "description": null
   },
   "UNLOCK_ERROR": {
     "context": "main.rs",
-    "definedIn": "src/main.rs:92",
+    "definedIn": "src/main.rs:95",
     "plural": false,
     "description": null
   }

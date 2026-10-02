@@ -6,6 +6,7 @@ use alight::burn_dao_audio_cd_job::{
     BurnDaoAudioCdJob, BurnDaoAudioCdJobProgress, BurnDaoAudioCdJobProgressTask,
     BurnDaoAudioCdTrack,
 };
+use alight::cd_text::{CdText, TrackData};
 use alight::driver::mmc::MmcDriver;
 use cntp_i18n::{tr, tr_error, tr_info, trn_info};
 use indicatif::{MultiProgress, ProgressBar};
@@ -23,20 +24,30 @@ use symphonia::core::audio::{Audio, AudioBuffer};
 use symphonia::core::formats::TrackType;
 use symphonia::core::formats::probe::Hint;
 use symphonia::core::io::{MediaSourceStream, MediaSourceStreamOptions};
+use symphonia::core::meta::StandardTag;
 use symphonia::default::{get_codecs, get_probe};
-use tracing::{Level, error};
+use tracing::{Level, error, info};
 
 pub fn simple_audio(args: SimpleAudioArgs, mmc: MmcDriver) -> ExitCode {
     let files_len = args.files.len();
 
+    let mut cd_text = CdText::new();
+    cd_text.append_track(TrackData {
+        title: Some(args.album_name.unwrap_or("CD".into())),
+        performers: Some("Performer".into()),
+        ..Default::default()
+    });
+
     let mut job = BurnDaoAudioCdJob::new();
     job.set_dry(args.dry);
     for file in args.files {
-        job.push_track(match create_track(file) {
+        job.push_track(match create_track(file, &mut cd_text) {
             Ok(track) => track,
             Err(e) => return e,
         })
     }
+
+    job.set_cd_text(cd_text);
 
     trn_info!(
         "BURN_SUMMARY",
@@ -139,7 +150,7 @@ fn task_message(task: &BurnDaoAudioCdJobProgressTask) -> String {
     .to_string()
 }
 
-fn create_track(file: String) -> Result<BurnDaoAudioCdTrack, ExitCode> {
+fn create_track(file: String, cd_text: &mut CdText) -> Result<BurnDaoAudioCdTrack, ExitCode> {
     let mut file = match File::open(&file) {
         Ok(file) => file,
         Err(e) => {
@@ -181,6 +192,22 @@ fn create_track(file: String) -> Result<BurnDaoAudioCdTrack, ExitCode> {
             return Err(ExitCode::FAILURE);
         }
     };
+
+    if let Some(meta) = format.metadata().skip_to_latest() {
+        let mut cd_text_track = TrackData::default();
+        for tag in &meta.media.tags {
+            match &tag.std {
+                Some(StandardTag::TrackTitle(title)) => {
+                    cd_text_track.title = Some(String::clone(title))
+                }
+                Some(StandardTag::Artist(artist)) => {
+                    cd_text_track.performers = Some(String::clone(artist))
+                }
+                _ => {}
+            }
+        }
+        cd_text.append_track(cd_text_track)
+    }
 
     let Some(track) = format.first_track(TrackType::Audio) else {
         tr_error!("READ_ERROR", error = "No audio track found");

@@ -1,7 +1,7 @@
 use crate::addresses::{Lba, Msf};
 use crate::driver::{
-    BlankMode, CdrDriver, CdrDriverBufferCapacity, CdrDriverError, CdrDriverModePage,
-    CdrSessionFormat, CdrStatusResult, GenericProgress, Progress, Writer,
+    BlankMode, CdrDriver, CdrDriverBufferCapacity, CdrDriverDiscInformation, CdrDriverError,
+    CdrDriverModePage, CdrSessionFormat, CdrStatusResult, GenericProgress, Progress, Writer,
 };
 use crate::progress_indication::{ProgressIndication, ProgressIndicationPacket};
 use crate::scsi::{ScsiDriver, ScsiError, ScsiOpcode, TestUnitReadyResponse, create_scsi_driver};
@@ -160,7 +160,7 @@ impl CdrDriver for MmcDriver {
 
         mode_page.result[3] &= 0x3f;
         mode_page.result[4] &= 0xf0;
-        // mode_page.result[4] |= 3;
+        mode_page.result[4] |= 3;
 
         mode_page.result[8] = match session_format {
             CdrSessionFormat::CdDigitalAudio => 0x00,
@@ -301,9 +301,8 @@ impl CdrDriver for MmcDriver {
         Ok(())
     }
 
-    fn start_write10(&self, address: Lba) -> Result<Writer, CdrDriverError> {
+    fn start_write10(&self, block_size: usize, address: Lba) -> Result<Writer, CdrDriverError> {
         let driver = self.scsi.clone();
-        let block_size = 2352;
         Ok(Writer {
             block_size,
             address,
@@ -312,13 +311,13 @@ impl CdrDriver for MmcDriver {
             perform_write: Box::new(move |data, address| {
                 let transfer_blocks = data.len() / block_size;
                 debug!(
-                    "Writing {} bytes to address {} ({} blocks)",
+                    "Writing {} bytes to address {} / LBA {} ({} blocks)",
                     data.len(),
                     Msf::from(address),
+                    address,
                     transfer_blocks
                 );
-                let address = address.0 as i32 - 150;
-                let address = address.to_be_bytes();
+                let address = address.0.to_be_bytes();
                 driver.send_cmd_with_input(
                     &[
                         ScsiOpcode::Write10 as u8,
@@ -395,11 +394,55 @@ impl CdrDriver for MmcDriver {
         })
     }
 
+    fn disc_information(&self) -> Result<CdrDriverDiscInformation, CdrDriverError> {
+        let response = self.scsi_driver().send_cmd_with_output(&[
+            ScsiOpcode::ReadDiskInfo as u8,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x22,
+            0x0,
+        ])?;
+
+        let lead_in_start = Msf::new(response[17], response[18], response[19]);
+        let (lead_in_len, lead_out_len) = if lead_in_start >= Msf::new(80, 0, 0) {
+            (Msf::from(Lba(450000) - lead_in_start), Msf::new(1, 30, 0))
+        } else {
+            (Msf::new(1, 0, 0), Msf::new(0, 30, 0))
+        };
+
+        Ok(CdrDriverDiscInformation {
+            lead_in_start: lead_in_start.into(),
+            lead_in_length: lead_in_len.into(),
+            lead_out_length: lead_out_len.into(),
+        })
+    }
+
     fn next_write_address(&self) -> Result<Lba, CdrDriverError> {
         let info_block_len = 0_i16.to_be_bytes();
-        let response = self.scsi_driver().send_cmd_with_output(&[ScsiOpcode::ReadTrackInformation as u8, 0x1, 0x0, 0x0, 0x0, 0xFF, 0x0, info_block_len[0], info_block_len[1], 0x0])?;
+        let response = self.scsi_driver().send_cmd_with_output(&[
+            ScsiOpcode::ReadTrackInformation as u8,
+            0x1,
+            0x0,
+            0x0,
+            0x0,
+            0xFF,
+            0x0,
+            info_block_len[0],
+            info_block_len[1],
+            0x0,
+        ])?;
         if response[6] & 0x40 > 0 && response[7] & 0x1 > 0 && response[6] & 0xb0 == 0 {
-            Ok(Lba(u32::from_be_bytes([response[12], response[13], response[14], response[15]]) as u64 + 150))
+            Ok(Lba(i32::from_be_bytes([
+                response[12],
+                response[13],
+                response[14],
+                response[15],
+            ])))
         } else {
             Err(CdrDriverError::InvalidResponse)
         }

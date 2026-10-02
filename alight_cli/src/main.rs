@@ -49,6 +49,9 @@ pub struct SimpleAudioArgs {
     #[arg(long)]
     dry: bool,
 
+    #[arg(long)]
+    album_name: Option<String>,
+
     #[arg(required = true)]
     files: Vec<String>,
 }

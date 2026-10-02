@@ -1,5 +1,5 @@
-use std::fmt::{Debug, Formatter};
 use crate::addresses::Msf;
+use std::fmt::{Debug, Formatter};
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct CueSheetTransition {
@@ -9,7 +9,7 @@ pub struct CueSheetTransition {
     pub data_form_subchannel: CueSheetDataFormSubchannel,
     pub data_form: CueSheetDataForm,
     pub scms: u8,
-    pub address: Msf
+    pub address: Msf,
 }
 
 pub const TRACK_LEAD_OUT: u8 = 0xAA;
@@ -19,7 +19,7 @@ pub enum CueSheetControl {
     Audio = 0x0,
 
     #[default]
-    Data = 0x4
+    Data = 0x4,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
@@ -28,7 +28,7 @@ pub enum CueSheetDataFormSubchannel {
     NoSubchannel = 0x0,
     SupplyRawPQ = 0x1,
     SupplyPackedRW = 0x2,
-    SupplyRawRW = 0x3
+    SupplyRawRW = 0x3,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
@@ -37,7 +37,9 @@ pub enum CueSheetDataForm {
 
     #[default]
     Rom1 = 0x1,
-    Rom2 = 0x2
+    Rom2 = 0x2,
+
+    LeadIn
 }
 
 impl CueSheetTransition {
@@ -46,11 +48,17 @@ impl CueSheetTransition {
             ((self.control as u8) << 4) | 0x1,
             self.track,
             self.index,
-            ((self.data_form_subchannel as u8) << 4) | self.data_form as u8,
+            if self.data_form == CueSheetDataForm::LeadIn && self.data_form_subchannel == CueSheetDataFormSubchannel::SupplyPackedRW {
+                0x41
+            } else if self.data_form == CueSheetDataForm::LeadIn {
+                CueSheetDataForm::Rom1 as u8
+            } else {
+                ((self.data_form_subchannel as u8) << 4) | self.data_form as u8
+            },
             self.scms,
             self.address.minutes,
             self.address.seconds,
-            self.address.frames
+            self.address.frames,
         ]
     }
 }
@@ -62,7 +70,7 @@ pub struct CueSheet {
 impl CueSheet {
     pub fn new() -> Self {
         Self {
-            transitions: Vec::new()
+            transitions: Vec::new(),
         }
     }
 
@@ -87,8 +95,12 @@ impl Debug for CueSheet {
 
 impl Debug for CueSheetTransition {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for byte in self.generate() {
+        for byte in &self.generate()[..5] {
             write!(f, "{:02x}  ", byte)?;
+        }
+        write!(f, "MSF ")?;
+        for byte in &self.generate()[5..] {
+            write!(f, "{:02}:", byte)?;
         }
         writeln!(f)?;
         Ok(())

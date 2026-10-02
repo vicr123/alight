@@ -1,8 +1,19 @@
+use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
-use std::ops::Add;
+use std::ops::{Add, Neg, Sub};
 
-#[derive(Debug, Eq, Default, PartialEq, Clone, Copy)]
-pub struct Lba(pub u64);
+#[derive(Debug, Eq, Default, PartialEq, Clone, Copy, PartialOrd, Ord)]
+pub struct Lba(pub i32);
+
+impl Lba {
+    pub const PREGAP_START: Lba = Lba(-150);
+}
+
+impl Display for Lba {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
 
 #[derive(Debug, Eq, Default, PartialEq, Clone, Copy)]
 pub struct Msf {
@@ -45,16 +56,17 @@ impl Display for Msf {
 
 impl From<Msf> for Lba {
     fn from(value: Msf) -> Self {
-        Lba(value.frames as u64 + value.seconds as u64 * 75 + value.minutes as u64 * 60 * 75)
+        Lba(value.frames as i32 + value.seconds as i32 * 75 + value.minutes as i32 * 60 * 75 - 150)
     }
 }
 
 impl From<Lba> for Msf {
     fn from(value: Lba) -> Self {
+        let adjusted = (value.0 + 150).rem_euclid(450000);
         Msf {
-            minutes: (value.0 / (75 * 60)) as u8,
-            seconds: ((value.0 / 75) % 60) as u8,
-            frames: (value.0 % 75) as u8,
+            minutes: (adjusted / (75 * 60)) as u8,
+            seconds: ((adjusted / 75) % 60) as u8,
+            frames: (adjusted % 75) as u8,
         }
     }
 }
@@ -63,7 +75,15 @@ impl Add<Lba> for Lba {
     type Output = Lba;
 
     fn add(self, rhs: Lba) -> Self::Output {
-        Lba(self.0 + rhs.0)
+        self + rhs.0
+    }
+}
+
+impl Sub<Lba> for Lba {
+    type Output = Lba;
+
+    fn sub(self, rhs: Lba) -> Self::Output {
+        self - rhs.0
     }
 }
 
@@ -91,5 +111,51 @@ impl Add<Lba> for Msf {
 
     fn add(self, rhs: Lba) -> Self::Output {
         (Lba::from(self) + rhs).into()
+    }
+}
+
+impl Sub<Lba> for Msf {
+    type Output = Msf;
+
+    fn sub(self, rhs: Lba) -> Self::Output {
+        (Lba::from(self) - rhs).into()
+    }
+}
+
+impl Add<i32> for Lba {
+    type Output = Lba;
+
+    fn add(self, rhs: i32) -> Self::Output {
+        Lba(self.0 + rhs)
+    }
+}
+
+impl Sub<i32> for Lba {
+    type Output = Lba;
+
+    fn sub(self, rhs: i32) -> Self::Output {
+        Lba(self.0.checked_sub(rhs).unwrap_or_else(|| 450000 - self.0 - rhs))
+    }
+}
+
+impl Sub<Msf> for Lba {
+    type Output = Lba;
+
+    fn sub(self, rhs: Msf) -> Self::Output {
+        self - Lba::from(rhs)
+    }
+}
+
+impl Neg for Lba {
+    type Output = Lba;
+
+    fn neg(self) -> Self::Output {
+        Lba(-self.0)
+    }
+}
+
+impl PartialOrd<Msf> for Msf {
+    fn partial_cmp(&self, other: &Msf) -> Option<Ordering> {
+        Lba::from(self.clone()).partial_cmp(&Lba::from(other.clone()))
     }
 }

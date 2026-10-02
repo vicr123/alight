@@ -21,3 +21,5 @@ cntp_i18n_gen = { git = "https://github.com/theCheeseboard/contemporary-rs" }
 symphonia = { version = "0.6", features = ["all"] }
 rubato = "2"
 ringbuf = "0.5"
+encoding_rs = "0.8"
+crc = "3"

@@ -9,3 +9,5 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 smol = { workspace = true }
 async-channel = { workspace = true }
+encoding_rs = { workspace = true }
+crc = { workspace = true }
