@@ -1,7 +1,8 @@
 use crate::addresses::{Lba, Msf};
 use crate::driver::{
     BlankMode, CdrDriver, CdrDriverBufferCapacity, CdrDriverDiscInformation, CdrDriverError,
-    CdrDriverModePage, CdrSessionFormat, CdrStatusResult, GenericProgress, Progress, Writer,
+    CdrDriverModePage, CdrSessionFormat, CdrStatusResult, DiscStatus, GenericProgress, Progress,
+    Writer,
 };
 use crate::progress_indication::{ProgressIndication, ProgressIndicationPacket};
 use crate::scsi::{ScsiDriver, ScsiError, ScsiOpcode, TestUnitReadyResponse, create_scsi_driver};
@@ -419,6 +420,14 @@ impl CdrDriver for MmcDriver {
             lead_in_start: lead_in_start.into(),
             lead_in_length: lead_in_len.into(),
             lead_out_length: lead_out_len.into(),
+            last_possible_lead_out_start: Msf::new(response[21], response[22], response[23]).into(),
+            erasable: response[2] & 0x10 > 0,
+            disc_status: match response[2] & 0x03 {
+                0 => DiscStatus::Empty,
+                1 => DiscStatus::Appendable,
+                2 => DiscStatus::Closed,
+                _ => return Err(CdrDriverError::InvalidResponse),
+            },
         })
     }
 

@@ -82,10 +82,20 @@ pub struct CdrDriverBufferCapacity {
     pub available: u32,
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum DiscStatus {
+    Empty,
+    Appendable,
+    Closed
+}
+
 pub struct CdrDriverDiscInformation {
     pub lead_in_start: Lba,
     pub lead_in_length: Lba,
-    pub lead_out_length: Lba
+    pub lead_out_length: Lba,
+    pub last_possible_lead_out_start: Lba,
+    pub erasable: bool,
+    pub disc_status: DiscStatus
 }
 
 pub trait CdrDriver: Send + Sync {

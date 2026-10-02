@@ -38,6 +38,32 @@ pub enum ScsiError {
     },
 }
 
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SenseKey {
+    NoSense = 0x00,
+    RecoveredError = 0x01,
+    NotReady = 0x02,
+    MediumError = 0x03,
+    HardwareError = 0x04,
+    IllegalRequest = 0x05,
+    UnitAttention = 0x06,
+    DataProtect = 0x07,
+    BlankCheck = 0x08,
+    VendorSpecific = 0x09,
+    CopyAborted = 0x0A,
+    AbortedCommand = 0x0B,
+    VolumeOverflow = 0x0D,
+    Miscompare = 0x0E,
+    Completed = 0x0F
+}
+
+impl PartialEq<SenseKey> for u8 {
+    fn eq(&self, other: &SenseKey) -> bool {
+        (*other as u8) == *self
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SenseData {
     pub bytes: Vec<u8>,
@@ -54,6 +80,18 @@ impl SenseData {
 
     pub fn len(&self) -> usize {
         self.bytes.len()
+    }
+
+    pub fn sense_key(&self) -> u8 {
+        self.bytes[2] & 0x0F
+    }
+
+    pub fn additional_sense_code(&self) -> Option<u8> {
+        self.bytes.get(12).cloned()
+    }
+
+    pub fn additional_sense_code_qualifier(&self) -> Option<u8> {
+        self.bytes.get(13).cloned()
     }
 }
 

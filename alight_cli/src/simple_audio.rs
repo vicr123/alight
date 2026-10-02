@@ -4,9 +4,10 @@ use crate::simple_audio::resampler::Resampler;
 use crate::{SimpleAudioArgs, pause_before_operation, progress_style};
 use alight::burn_dao_audio_cd_job::{
     BurnDaoAudioCdJob, BurnDaoAudioCdJobProgress, BurnDaoAudioCdJobProgressTask,
-    BurnDaoAudioCdTrack,
+    BurnDaoAudioCdTrack, BurnPossibility,
 };
 use alight::cd_text::{CdText, TrackData};
+use alight::driver::CdrDriverError;
 use alight::driver::mmc::MmcDriver;
 use cntp_i18n::{tr, tr_error, tr_info, trn_info};
 use indicatif::{MultiProgress, ProgressBar};
@@ -48,6 +49,37 @@ pub fn simple_audio(args: SimpleAudioArgs, mmc: MmcDriver) -> ExitCode {
     }
 
     job.set_cd_text(cd_text);
+
+    match job.can_burn(&mmc) {
+        Ok(BurnPossibility::Ok) => {
+            // Noop
+        }
+        Ok(BurnPossibility::EraseRequired) => {
+            // TODO: Allow erase flag
+            tr_error!("BURN_CHECK_ERASE_REQUIRED", "The disc in the drive needs to be erased before burning.");
+            return ExitCode::FAILURE;
+        }
+        Ok(BurnPossibility::NotEnoughSpace) => {
+            tr_error!("BURN_CHECK_NOT_ENOUGH_SPACE", "The disc in the drive is too small to hold the required data.");
+            return ExitCode::FAILURE;
+        }
+        Ok(BurnPossibility::NoMedia) => {
+            tr_error!("BURN_CHECK_NO_MEDIA", "There is no disc in the drive.");
+            return ExitCode::FAILURE;
+        }
+        Ok(BurnPossibility::MediaWritten) => {
+            tr_error!("BURN_CHECK_MEDIA_WRITTEN", "The disc in the drive is already burned.");
+            return ExitCode::FAILURE;
+        }
+        Err(e) => {
+            tr_error!(
+                "BURN_CHECK_FAIL",
+                "Unable to check status of disc drive: {{error}}",
+                error = e.to_string()
+            );
+            return ExitCode::FAILURE;
+        }
+    }
 
     trn_info!(
         "BURN_SUMMARY",

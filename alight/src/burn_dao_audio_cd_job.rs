@@ -4,8 +4,9 @@ use crate::cue_sheet::{
     CueSheet, CueSheetControl, CueSheetDataForm, CueSheetDataFormSubchannel, CueSheetTransition,
     TRACK_LEAD_OUT,
 };
-use crate::driver::{CdrDriver, CdrDriverError, CdrSessionFormat, CdrStatusResult, Progress};
+use crate::driver::{CdrDriver, CdrDriverDiscInformation, CdrDriverError, CdrSessionFormat, CdrStatusResult, DiscStatus, Progress};
 use crate::progress_indication::{ProgressIndication, ProgressIndicationPacket};
+use crate::scsi::{ScsiError, SenseKey};
 use async_channel::Sender;
 use smol::Timer;
 use std::collections::HashMap;
@@ -53,6 +54,14 @@ pub enum BurnDaoAudioCdJobProgressTask {
     WriteLeadOut,
 }
 
+pub enum BurnPossibility {
+    Ok,
+    EraseRequired,
+    NotEnoughSpace,
+    NoMedia,
+    MediaWritten
+}
+
 impl BurnDaoAudioCdJob {
     pub fn new() -> BurnDaoAudioCdJob {
         Self {
@@ -92,6 +101,41 @@ impl BurnDaoAudioCdJob {
         .detach();
 
         Ok(ProgressIndication::new(cons))
+    }
+
+    pub fn can_burn(&self, driver: &dyn CdrDriver) -> Result<BurnPossibility, CdrDriverError> {
+        let disc_information = match driver.disc_information() {
+            Ok(disc_information) => disc_information,
+            Err(CdrDriverError::ScsiError(ScsiError::DriveError {
+                cmd,
+                sense_data: Some(sense_data),
+            })) => {
+                if sense_data.sense_key() == SenseKey::NotReady
+                    && sense_data.additional_sense_code() == Some(0x3A)
+                {
+                    return Ok(BurnPossibility::NoMedia);
+                }
+
+                return Err(CdrDriverError::ScsiError(ScsiError::DriveError {
+                    cmd,
+                    sense_data: Some(sense_data),
+                }));
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        };
+
+        // TODO: Double check space constraints
+
+        if disc_information.disc_status != DiscStatus::Empty {
+            if disc_information.erasable {
+                return Ok(BurnPossibility::EraseRequired);
+            }
+            return Ok(BurnPossibility::MediaWritten);
+        }
+
+        Ok(BurnPossibility::Ok)
     }
 }
 
@@ -233,7 +277,7 @@ async fn burn(
                     for index in 0..24 {
                         let frame_idx = index * 4;
                         let cd_text_idx = (index * 3 + write_lba as usize * 24 * 3) % cd_text.len();
-                        
+
                         unfold_for_subchannel(
                             &cd_text[cd_text_idx..cd_text_idx + 3].try_into().unwrap(),
                             (&mut frame[frame_idx..frame_idx + 4]).try_into().unwrap(),

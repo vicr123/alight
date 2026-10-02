@@ -105,6 +105,14 @@ impl CdText {
         self.composer_data.push(track_data.composers);
         self.arranger_data.push(track_data.arrangers);
     }
+    
+    pub fn replace_track(&mut self, track_data: TrackData, track: usize) {
+        self.title_data[track] = track_data.title;
+        self.performer_data[track] = track_data.performers;
+        self.songwriter_data[track] = track_data.songwriters;
+        self.composer_data[track] = track_data.composers;
+        self.arranger_data[track] = track_data.arrangers;
+    }
 
     pub fn into_bytes(self) -> Vec<u8> {
         let mut seq = 0;
