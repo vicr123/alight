@@ -105,7 +105,7 @@ impl CdText {
         self.composer_data.push(track_data.composers);
         self.arranger_data.push(track_data.arrangers);
     }
-    
+
     pub fn replace_track(&mut self, track_data: TrackData, track: usize) {
         self.title_data[track] = track_data.title;
         self.performer_data[track] = track_data.performers;
@@ -125,6 +125,21 @@ impl CdText {
         packs.append(&mut Self::generate_packs(
             PackType::Performers,
             |track| self.performer_data.get(track as usize).cloned().flatten(),
+            &mut seq,
+        ));
+        packs.append(&mut Self::generate_packs(
+            PackType::Songwriters,
+            |track| self.songwriter_data.get(track as usize).cloned().flatten(),
+            &mut seq,
+        ));
+        packs.append(&mut Self::generate_packs(
+            PackType::Composers,
+            |track| self.composer_data.get(track as usize).cloned().flatten(),
+            &mut seq,
+        ));
+        packs.append(&mut Self::generate_packs(
+            PackType::Arrangers,
+            |track| self.arranger_data.get(track as usize).cloned().flatten(),
             &mut seq,
         ));
 
