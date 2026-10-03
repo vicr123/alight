@@ -48,6 +48,9 @@ pub struct EraseArgs {
 pub struct SimpleAudioArgs {
     #[arg(long)]
     dry: bool,
+    
+    #[arg(long)]
+    erase: bool,
 
     #[arg(long)]
     album_name: Option<String>,

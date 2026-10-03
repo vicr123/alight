@@ -49,13 +49,13 @@ pub fn simple_audio(args: SimpleAudioArgs, mmc: MmcDriver) -> ExitCode {
     }
 
     job.set_cd_text(cd_text);
+    job.set_erase(args.erase);
 
     match job.can_burn(&mmc) {
         Ok(BurnPossibility::Ok) => {
             // Noop
         }
         Ok(BurnPossibility::EraseRequired) => {
-            // TODO: Allow erase flag
             tr_error!("BURN_CHECK_ERASE_REQUIRED", "The disc in the drive needs to be erased before burning.");
             return ExitCode::FAILURE;
         }
@@ -162,6 +162,9 @@ pub fn simple_audio(args: SimpleAudioArgs, mmc: MmcDriver) -> ExitCode {
 
 fn task_message(task: &BurnDaoAudioCdJobProgressTask) -> String {
     match task {
+        BurnDaoAudioCdJobProgressTask::EraseMedia => {
+            tr!("BURN_ERASE_MEDIA", "Erasing disc")
+        }
         BurnDaoAudioCdJobProgressTask::PowerCalibration => {
             tr!("BURN_POWER_CALIBRATION", "Preparing burn session")
         }

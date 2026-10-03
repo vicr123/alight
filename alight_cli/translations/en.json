@@ -7,6 +7,7 @@
   "BURN_CHECK_MEDIA_WRITTEN": "The disc in the drive is already burned.",
   "BURN_CHECK_NOT_ENOUGH_SPACE": "The disc in the drive is too small to hold the required data.",
   "BURN_CHECK_NO_MEDIA": "There is no disc in the drive.",
+  "BURN_ERASE_MEDIA": "Erasing disc",
   "BURN_FAIL": "Burn failed: {{error}}",
   "BURN_POWER_CALIBRATION": "Preparing burn session",
   "BURN_SUCCESS": "Burned.",

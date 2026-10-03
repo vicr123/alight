@@ -4,7 +4,7 @@ use crate::cue_sheet::{
     CueSheet, CueSheetControl, CueSheetDataForm, CueSheetDataFormSubchannel, CueSheetTransition,
     TRACK_LEAD_OUT,
 };
-use crate::driver::{CdrDriver, CdrDriverDiscInformation, CdrDriverError, CdrSessionFormat, CdrStatusResult, DiscStatus, Progress};
+use crate::driver::{BlankMode, CdrDriver, CdrDriverDiscInformation, CdrDriverError, CdrSessionFormat, CdrStatusResult, DiscStatus, Progress};
 use crate::progress_indication::{ProgressIndication, ProgressIndicationPacket};
 use crate::scsi::{ScsiError, SenseKey};
 use async_channel::Sender;
@@ -34,6 +34,7 @@ impl BurnDaoAudioCdTrack {
 
 pub struct BurnDaoAudioCdJob {
     dry: bool,
+    erase: bool,
     tracks: Vec<BurnDaoAudioCdTrack>,
     cd_text: Option<CdText>,
 }
@@ -48,6 +49,7 @@ pub struct BurnDaoAudioCdJobProgress {
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub enum BurnDaoAudioCdJobProgressTask {
+    EraseMedia,
     PowerCalibration,
     WriteLeadIn,
     WriteTrack(u8),
@@ -66,6 +68,7 @@ impl BurnDaoAudioCdJob {
     pub fn new() -> BurnDaoAudioCdJob {
         Self {
             dry: false,
+            erase: false,
             tracks: vec![],
             cd_text: None,
         }
@@ -73,6 +76,10 @@ impl BurnDaoAudioCdJob {
 
     pub fn set_dry(&mut self, dry: bool) {
         self.dry = dry;
+    }
+
+    pub fn set_erase(&mut self, erase: bool) {
+        self.erase = erase;
     }
 
     pub fn push_track(&mut self, track: BurnDaoAudioCdTrack) {
@@ -130,9 +137,12 @@ impl BurnDaoAudioCdJob {
 
         if disc_information.disc_status != DiscStatus::Empty {
             if disc_information.erasable {
-                return Ok(BurnPossibility::EraseRequired);
+                if !self.erase {
+                    return Ok(BurnPossibility::EraseRequired);
+                }
+            } else {
+                return Ok(BurnPossibility::MediaWritten);
             }
-            return Ok(BurnPossibility::MediaWritten);
         }
 
         Ok(BurnPossibility::Ok)
@@ -144,17 +154,23 @@ async fn burn(
     prod: &mut Sender<ProgressIndicationPacket<BurnDaoAudioCdJobProgress, CdrDriverError>>,
     job: BurnDaoAudioCdJob,
 ) -> Result<(), CdrDriverError> {
+    let mut task_order = iter::once(BurnDaoAudioCdJobProgressTask::PowerCalibration)
+        .chain(iter::once(BurnDaoAudioCdJobProgressTask::WriteLeadIn))
+        .chain(
+            job.tracks
+                .iter()
+                .enumerate()
+                .map(|(i, _)| BurnDaoAudioCdJobProgressTask::WriteTrack(i as u8)),
+        )
+        .chain(iter::once(BurnDaoAudioCdJobProgressTask::WriteLeadOut))
+        .collect::<Vec<_>>();
+
+    if job.erase {
+        task_order.insert(0, BurnDaoAudioCdJobProgressTask::EraseMedia);
+    }
+
     let mut progress = BurnDaoAudioCdJobProgress {
-        task_order: iter::once(BurnDaoAudioCdJobProgressTask::PowerCalibration)
-            .chain(iter::once(BurnDaoAudioCdJobProgressTask::WriteLeadIn))
-            .chain(
-                job.tracks
-                    .iter()
-                    .enumerate()
-                    .map(|(i, _)| BurnDaoAudioCdJobProgressTask::WriteTrack(i as u8)),
-            )
-            .chain(iter::once(BurnDaoAudioCdJobProgressTask::WriteLeadOut))
-            .collect(),
+        task_order,
         task_progress: HashMap::new(),
         total_progress: Progress::new(0, 0),
         current_task: BurnDaoAudioCdJobProgressTask::PowerCalibration,
@@ -163,6 +179,21 @@ async fn burn(
     let _ = prod.send(progress.clone().into()).await;
 
     driver.lock_media()?;
+
+    if job.erase {
+        progress.current_task = BurnDaoAudioCdJobProgressTask::EraseMedia;
+        let mut blank_progress = driver.blank(BlankMode::Fast)?;
+        while let Some(update) = blank_progress.next().await {
+            let update = update?;
+            progress.task_progress.insert(
+                BurnDaoAudioCdJobProgressTask::EraseMedia,
+                update,
+            );
+            let _ = prod.send_blocking(progress.clone().into());
+        }
+    }
+    progress.current_task = BurnDaoAudioCdJobProgressTask::WriteLeadIn;
+
     let disc_information = driver.disc_information()?;
     driver.set_speed_multiplier(None)?;
     driver.start_write_session(job.dry, false, CdrSessionFormat::CdDigitalAudio)?;
