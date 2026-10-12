@@ -149,6 +149,12 @@ impl BurnDaoAudioCdJob {
     }
 }
 
+impl Default for BurnDaoAudioCdJob {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 async fn burn(
     driver: Box<dyn CdrDriver>,
     prod: &mut Sender<ProgressIndicationPacket<BurnDaoAudioCdJobProgress, CdrDriverError>>,
