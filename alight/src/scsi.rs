@@ -1,10 +1,11 @@
 use crate::driver::CdrDriverError;
-use crate::scsi::linux::LinuxScsiDriver;
 use std::fmt::{Display, Formatter};
 use std::io::Error;
 use std::ops::{Deref, Index};
 
+#[cfg(target_os = "linux")]
 mod linux;
+pub mod windows;
 
 pub enum ScsiOpcode {
     Rezero = 0x01,
@@ -32,6 +33,7 @@ pub enum ScsiDirection<'a> {
 #[derive(Debug)]
 pub enum ScsiError {
     IoError(std::io::Error),
+    SystemError(String),
     DriveError {
         cmd: Vec<u8>,
         sense_data: Option<SenseData>,
@@ -113,6 +115,7 @@ impl Display for ScsiError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ScsiError::IoError(e) => Display::fmt(e, f),
+            ScsiError::SystemError(e) => Display::fmt(e, f),
             ScsiError::DriveError { cmd, sense_data } => {
                 write!(f, "Generic SCSI error")?;
                 if let Some(sense_data) = sense_data {
@@ -218,5 +221,8 @@ pub trait ScsiDriver: Send + Sync {
 }
 
 pub fn create_scsi_driver<'a, 'b>(file: &'a str) -> Result<impl ScsiDriver + 'b, ScsiError> {
-    LinuxScsiDriver::new(file)
+    cfg_select! {
+        target_os = "windows" => windows::WindowsScsiDriver::new(file),
+        target_os = "linux" => linux::LinuxScsiDriver::new(file)
+    }
 }
