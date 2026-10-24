@@ -5,6 +5,8 @@ use std::ops::{Deref, Index};
 
 #[cfg(target_os = "linux")]
 mod linux;
+
+#[cfg(target_os = "windows")]
 pub mod windows;
 
 pub enum ScsiOpcode {
