@@ -43,6 +43,11 @@ pub fn blank(args: EraseArgs, mmc: MmcDriver) -> ExitCode {
         }
     }
 
+    if let Err(e) = mmc.lock_media() {
+        error!("Failed to lock media: {e:?}");
+        return ExitCode::FAILURE;
+    }
+
     let mut progress = match mmc.blank(blank_mode) {
         Ok(progress) => progress,
         Err(e) => {
@@ -69,6 +74,8 @@ pub fn blank(args: EraseArgs, mmc: MmcDriver) -> ExitCode {
 
         tr_info!("BLANK_SUCCESS", "Erased media.");
     });
+
+    let _ = mmc.unlock_media();
 
     if mmc.scsi_driver().rezero().is_err() {
         tr_warn!(

@@ -13,4 +13,15 @@ encoding_rs = { workspace = true }
 crc = { workspace = true }
 
 [target.'cfg(target_os="windows")'.dependencies]
-windows = { version = "0.62", features = ["Win32_System_IO", "Win32_Storage_FileSystem", "Win32_Security", "Win32_Storage_IscsiDisc"] }
+windows = {
+    version = "0.62",
+    features = [
+        "Win32_System_IO",
+        "Win32_System_Ioctl",
+        "Win32_Storage_FileSystem",
+        "Win32_Security",
+        "Win32_Storage_IscsiDisc",
+        "Win32_Devices_Cdrom",
+        "Win32_Devices_DeviceAndDriverInstallation"
+    ]
+}

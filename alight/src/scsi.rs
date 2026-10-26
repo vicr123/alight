@@ -161,6 +161,9 @@ pub trait ScsiDriver: Send + Sync {
     fn vendor(&self) -> &str;
     fn product(&self) -> &str;
     fn revision(&self) -> &str;
+    
+    fn take_exclusive_lock(&self) -> Result<(), ScsiError>;
+    fn release_exclusive_lock(&self) -> Result<(), ScsiError>;
 
     fn send_cmd_with_direction(
         &self,

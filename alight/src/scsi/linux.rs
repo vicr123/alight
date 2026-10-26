@@ -120,6 +120,14 @@ impl ScsiDriver for LinuxScsiDriver {
         &self.device
     }
 
+    fn take_exclusive_lock(&self) -> Result<(), ScsiError> {
+        Ok(())
+    }
+
+    fn release_exclusive_lock(&self) -> Result<(), ScsiError> {
+        Ok(())
+    }
+
     fn vendor(&self) -> &str {
         &self.vendor
     }

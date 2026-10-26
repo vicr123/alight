@@ -7,13 +7,13 @@
   },
   "BLANK_IN_PROGRESS": {
     "context": "blank.rs",
-    "definedIn": "src/blank.rs:58",
+    "definedIn": "src/blank.rs:63",
     "plural": false,
     "description": null
   },
   "BLANK_SUCCESS": {
     "context": "blank.rs",
-    "definedIn": "src/blank.rs:70",
+    "definedIn": "src/blank.rs:75",
     "plural": false,
     "description": null
   },
@@ -145,7 +145,7 @@
   },
   "REZERO_FAILED": {
     "context": "blank.rs",
-    "definedIn": "src/blank.rs:75",
+    "definedIn": "src/blank.rs:82",
     "plural": false,
     "description": null
   },

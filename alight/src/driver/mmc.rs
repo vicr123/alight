@@ -39,11 +39,13 @@ impl CdrDriver for MmcDriver {
     }
 
     fn lock_media(&self) -> Result<(), ScsiError> {
+        self.scsi.take_exclusive_lock()?;
         mmc_lock_media(&self.scsi, true)
     }
 
     fn unlock_media(&self) -> Result<(), ScsiError> {
-        mmc_lock_media(&self.scsi, false)
+        mmc_lock_media(&self.scsi, false)?;
+        self.scsi.release_exclusive_lock()
     }
 
     fn eject(&self) -> Result<(), ScsiError> {
